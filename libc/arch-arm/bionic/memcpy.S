@@ -89,9 +89,22 @@ ENTRY(memcpy)
          * avoid the goofy code below. In practice this doesn't seem to make
          * a big difference.
          */
-        pld         [r1, #(CACHE_LINE_SIZE*2)]
-        pld         [r1, #(CACHE_LINE_SIZE*3)]
+        pld         [r0, #(PREFETCH_DISTANCE)]
         pld         [r1, #(PREFETCH_DISTANCE)]
+
+        cmp         r2, #0x10000
+        bhi         1f
+
+8:
+        vld1.8      {d0  - d3},   [r1]!
+        vld1.8      {d4  - d7},   [r1]!
+        pld         [r0, #(PREFETCH_DISTANCE)]
+        pld         [r1, #(PREFETCH_DISTANCE)]
+        subs        r2, r2, #64
+        vst1.8      {d0  - d3},   [r0, :128]!
+        vst1.8      {d4  - d7},   [r0, :128]!
+        bhs         8b
+        bl          2f
 
 1:      /* The main loop copies 64 bytes at a time */
         vld1.8      {d0  - d3},   [r1]!
